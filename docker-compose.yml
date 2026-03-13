@@ -12,7 +12,7 @@ volumes:
 
 services:
   nginx-proxy:
-    image: jwilder/nginx-proxy
+    image: jwilder/nginx-proxy:1.5
     restart: always
     ports:
       - "80:80"
@@ -22,11 +22,12 @@ services:
       - /apps/docker-articles/nginx/vhost.d:/etc/nginx/vhost.d
       - /apps/docker-articles/nginx/certs:/etc/nginx/certs:ro
       - /apps/docker-articles/nginx/html:/usr/share/nginx/html
+      - "./custom_proxy_settings.conf:/etc/nginx/conf.d/custom_proxy_settings.conf"
     labels:
-     com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy: "true"
+      com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy: "true"
 
   letsencrypt:
-    image: jrcs/letsencrypt-nginx-proxy-companion:latest
+    image: jrcs/letsencrypt-nginx-proxy-companion:2.2.10
     restart: always
     depends_on:
       - nginx-proxy
@@ -45,10 +46,10 @@ services:
       - db
       - redis
     environment:
-      - VIRTUAL_HOST=local.local.info
+      - VIRTUAL_HOST=${OWNCLOUD_DOMAIN}
       - VIRTUAL_PORT=8080
-      - LETSENCRYPT_HOST=local.local.info
-      - LETSENCRYPT_EMAIL=x@x.x
+      - LETSENCRYPT_HOST=${OWNCLOUD_DOMAIN}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
       - OWNCLOUD_DOMAIN=${OWNCLOUD_DOMAIN}
       - OWNCLOUD_DB_TYPE=mysql
       - OWNCLOUD_DB_NAME=owncloud
@@ -66,36 +67,33 @@ services:
       timeout: 10s
       retries: 5
     volumes:
-      - files:/mnt/data
+      - "./files:/mnt/data"
 
   db:
-    image: webhippie/mariadb:latest
+    image: mariadb:10.11
     restart: always
     environment:
-      - MARIADB_ROOT_PASSWORD=owncloud
-      - MARIADB_USERNAME=owncloud
-      - MARIADB_PASSWORD=owncloud
-      - MARIADB_DATABASE=owncloud
-      - MARIADB_MAX_ALLOWED_PACKET=128M
-      - MARIADB_INNODB_LOG_FILE_SIZE=64M
+      - MYSQL_ROOT_PASSWORD=owncloud
+      - MYSQL_USER=owncloud
+      - MYSQL_PASSWORD=owncloud
+      - MYSQL_DATABASE=owncloud
+    command: ["--max-allowed-packet=128M", "--innodb-log-file-size=64M"]
     healthcheck:
-      test: ["CMD", "/usr/bin/healthcheck"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD", "mysqladmin", "ping", "-u", "root", "--password=owncloud"]
+      interval: 10s
+      timeout: 5s
       retries: 5
     volumes:
-      - mysql:/var/lib/mysql
-      - backup:/var/lib/backup
+      - "./mysql:/var/lib/mysql"
 
   redis:
-    image: webhippie/redis:latest
+    image: redis:6
     restart: always
-    environment:
-      - REDIS_DATABASES=1
+    command: ["--databases", "1"]
     healthcheck:
-      test: ["CMD", "/usr/bin/healthcheck"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
       retries: 5
     volumes:
-      - redis:/var/lib/redis
+      - "./redis:/data"
