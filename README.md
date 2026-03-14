@@ -1,6 +1,6 @@
 # owncloud-nginx-letsencrypt-docker
 
-This is a simple repo with information on the a `docker-compose.yml` to run [ownCloud](https://owncloud.org/) with an Nginx proxy and LetsEncrypt using Docker on ARM based systems, like an Raspberry PI. Based on the official documentation from ownCloud it kept separate volumes for data.
+This repository provides a `docker-compose.yml` configuration to run [ownCloud](https://owncloud.org/) on ARM-based systems, such as the Raspberry Pi. The setup includes an Nginx proxy with Let's Encrypt integration. Instead of using volumes to store the data, every data is stored in local folders on disc.
 
 ## Information sources
 
@@ -17,7 +17,7 @@ Set up the necessary environment variables at the command line (or equivalent me
 
 ```bash
 cat << EOF >| .env
-OWNCLOUD_VERSION=10.8.0
+OWNCLOUD_VERSION=10.16.1
 OWNCLOUD_DOMAIN=localhost
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=admin
@@ -26,7 +26,7 @@ LETSENCRYPT_EMAIL=x@x.x
 EOF
 ```
 
-The webserver is nginx-proxy and it will listen on ports 80 and 443 by default, redirecting traffic to HTTPS for your ownCloud instance. The HTTP_PORT environment variable sets which port ownCloud itself will listen.
+The webserver is a nginx-proxy and it will listen on ports 80 and 443.
 
 The domain associated with the certificate will be the `OWNCLOUD_DOMAIN` you defined in the `.env` file.
 
@@ -49,6 +49,23 @@ And restart it with:
 ```bash
 docker-compose start
 ```
+
+## Backup
+
+As all data is stored in folders instead of valumes, it is easy to backup your data.
+
+Stop your instance:
+
+```bash
+docker-compose down
+```
+
+Generate a compressed backup:
+
+```bash
+docker run --rm -v $(pwd):/owncloud ubuntu tar czfv /owncloud/files_$(date +'%F').tar /owncloud/owncloud/
+```
+
 
 ## Upgrade your ownCloud
 
